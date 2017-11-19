@@ -20,7 +20,8 @@ Response to a recruitment test
 ## How to make it work
 
 at the root of the folder :
-> npm install\n
+> npm install
+
 > npm start
 
 ## Languages
