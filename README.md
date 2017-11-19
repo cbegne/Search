@@ -26,7 +26,7 @@ at the root of the folder :
 
 ## Languages
 
-ReactJS
+ReactJS (only front-end)
 
 ## Screenshots
 
