@@ -1,84 +1,118 @@
 import React, { Component } from 'react';
 import axios from 'axios';
+import queryString from 'query-string';
 import { DebounceInput } from 'react-debounce-input';
+import Cards from './Cards';
+import Selectors from './Selectors';
 import './css/search.css';
 
 class App extends Component {
 
-  state = {
-      value: '',
+  constructor(props) {
+    super(props);
+    const parsed = queryString.parse(this.props.location.search);
+    this.state = {
+      results: null,
       loaded: false,
-      peopleBase: [],
+      filter: parsed.filter || '',
+      search: parsed.search || '',
     };
+  }
 
-  // changeUrl = (name, genre, rating, sort) => {
-  //   const { pathname } = this.props.location;
-  //   const newUrl = `${pathname}?name=${name}&genre=${genre}&rating=${rating}&sort=${sort}&lang=${this.lang}`;
-  //   this.props.history.push(newUrl);
-  // }
-
-  getUrl = page => {
-    return `https://swapi.co/api/people/?page=${page}`
+  changeUrl = (search, filter) => {
+    const { pathname } = this.props.location;
+    const newUrl = `${pathname}?search=${search}&filter=${filter}`;
+    this.props.history.push(newUrl);
   }
 
   async componentDidMount() {
-    const url = this.getUrl(1);
-    const { data: { count } } = await axios.get(url);
-    const last = count / 10 + 1;
-    let peopleBase = [];
-    for (let i = 1; i < last; i++) {
-      let { data: { results } } = await axios.get(this.getUrl(i));
-      peopleBase.push.apply(peopleBase, results);
-    }
-    this.setState({ peopleBase, loaded: true });
-  }
-
-  search = event => {
-    const { peopleBase } = this.state;
-    // this.changeUrl(name, genre, rating, sort);
-    const value = event.target.value;
-    this.setState({ value });
-    console.log(peopleBase);
-    const test = peopleBase.filter(character => {
-      if (character.name.includes(value)) {
-        return character;
+    this.base = [
+      { category: 'people', nbPage: 0 },
+      { category: 'planets', nbPage: 0 },
+      { category: 'species', nbPage: 0 },
+      { category: 'vehicles', nbPage: 0 },
+      { category: 'starships', nbPage: 0 },
+    ];
+    // get number of pages for each category
+    const urls = this.base.map(elem => axios.get(this.getUrl(elem.category, 1)));
+    const firstOfEach = await Promise.all(urls);
+    firstOfEach.forEach((elem, index) => (
+      this.base[index].nbPage = Math.ceil(elem.data.count / 10)
+    ));
+    // call API for all data: every page for each category
+    const promiseData = [];
+    this.base.forEach((elem) => {
+      for (let i = 1; i < elem.nbPage; i += 1) {
+        const data = axios.get(this.getUrl(elem.category, i));
+        promiseData.push(data);
       }
-    })
-    console.log(test);
-
+    });
+    const data = await Promise.all(promiseData);
+    // from unformated data retrieved, get only 'results' and aggregate in one array
+    // adding the category for use in filter
+    this.starBase = [];
+    data.forEach((elem) => {
+      const { results } = elem.data;
+      const category = elem.config.url.split('api/').pop().split('/').shift();
+      results.forEach(result => result.category = category)
+      this.starBase.push(...results);
+    });
+    this.setState({ loaded: true });
+    const parsed = queryString.parse(this.props.location.search);
+    this.getResults(parsed.search, parsed.filter);
   }
 
-  // filter = (text, value) => {
-  //   const {
-  //     source,
-  //     name,
-  //   } = this.state;
-  //   const genre = (text === 'genre') ? value : this.state.genre;
-  //   const rating = (text === 'rating') ? value : this.state.rating;
-  //   const sort = (text === 'sort') ? value : this.state.sort;
-  //   source.cancel('Request canceled by reloading.');
-  //   this.changeUrl(name, genre, rating, sort);
-  //   this.setState({
-  //     [name]: value,
-  //     movies: [],
-  //     loadStarted: true,
-  //     hasMoreItems: true,
-  //     nextHref: null,
-  //     source: CancelToken.source(),
-  //   });
-  // }
+  componentWillReceiveProps(nextProps) {
+    const parsed = queryString.parse(nextProps.location.search);
+    this.getResults(parsed.search, parsed.filter);
+  }
+
+  getUrl = (category, page) => (`https://swapi.co/api/${category}/?page=${page}`)
+
+  getResults = (search, filter) => {
+    if (!search) {
+      this.setState({ results: null, search: '', filter });
+    } else {
+      const results = this.starBase.filter((elem) => {
+        const name = elem.name.toLocaleLowerCase();
+        const compare = search.toLocaleLowerCase();
+        if (!filter) {
+          return name.includes(compare) ? elem : '';
+        }
+        return name.includes(compare) && elem.category === filter ? elem : '';
+      });
+      this.setState({ results, search, filter });
+    }
+  }
+
+  search = (event) => {
+    const search = event.target.value;
+    const { filter } = this.state;
+    this.changeUrl(search, filter);
+  }
+
+  filter = (filter) => {
+    const { search } = this.state;
+    this.changeUrl(search, filter);
+  }
 
   render() {
-    // if (!this.state.loaded) return <div>Loading...</div>;
+    if (!this.state.loaded) return <div>Loading...</div>;
+
+    const { results, filter, search } = this.state;
+
     return (
       <div className="app-container">
-        <div className="app-title">Search a Star Wars character name:</div>
+        <div className="app-title">Star Wars Search</div>
         <DebounceInput
-          minLength={2}
+          minLength={1}
           debounceTimeout={300}
           onChange={this.search}
           className="search-bar"
+          value={search}
         />
+        <Selectors base={this.base} onSelect={this.filter} filter={filter} />
+        <Cards results={results} />
       </div>
     );
   }
