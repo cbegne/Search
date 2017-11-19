@@ -27,3 +27,5 @@ at the root of the folder :
 ## Languages
 
 ReactJS
+
+<p align="center"><img src="https://user-images.githubusercontent.com/23556987/32992558-5db6421a-cd4c-11e7-8c3e-bf4c9de7818d.png"></p>
