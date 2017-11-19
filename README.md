@@ -21,6 +21,7 @@ Response to a recruitment test
 
 at the root of the folder :
 > npm install
+
 > npm start
 
 ## Languages
