@@ -57,14 +57,22 @@ class App extends Component {
       results.forEach(result => result.category = category)
       this.starBase.push(...results);
     });
+
     this.setState({ loaded: true });
+
+    // if reload on search (query in url)
     const parsed = queryString.parse(this.props.location.search);
-    this.getResults(parsed.search, parsed.filter);
+    if (Object.keys(parsed).length) {
+      this.getResults(parsed.search, parsed.filter);
+    }
   }
 
   componentWillReceiveProps(nextProps) {
+    // if navigate through history
     const parsed = queryString.parse(nextProps.location.search);
-    this.getResults(parsed.search, parsed.filter);
+    if (Object.keys(parsed).length) {
+      this.getResults(parsed.search, parsed.filter);
+    }
   }
 
   getUrl = (category, page) => (`https://swapi.co/api/${category}/?page=${page}`)
@@ -74,8 +82,10 @@ class App extends Component {
       this.setState({ results: null, search: '', filter });
     } else {
       const results = this.starBase.filter((elem) => {
+        // cancel case sensitivity
         const name = elem.name.toLocaleLowerCase();
         const compare = search.toLocaleLowerCase();
+        // find elems in base where 'name' includes the search, and filter on category
         if (!filter) {
           return name.includes(compare) ? elem : '';
         }
