@@ -2,7 +2,7 @@
 
 ## Synopsis
 
-A search interface to find people / planets / vehicles / species / starships from the StarWars movies
+A search interface to find people / planets / vehicles / species / starships from the Star Wars movies
 
 ## Motivation
 
